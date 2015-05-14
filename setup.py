@@ -21,6 +21,8 @@ setup(
     packages=['superluminal'],
 
     install_requires=[
+        'gunicorn',
+        'oslo.config',
         'falcon'
     ],
 

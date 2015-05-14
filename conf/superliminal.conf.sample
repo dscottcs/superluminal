@@ -1,0 +1,21 @@
+[default]
+log_dir = /var/log/superluminal
+log_file = superluminal.log
+log_level = INFO
+
+[gunicorn]
+workers = 1
+user = superluminal
+group = superluminal
+bind_host = 127.0.0.1
+bind_port = 9002
+log_dir = /var/log/superluminal/gunicorn
+access_log_file = access.log
+error_log_file = error.log
+log_level = info
+keep_alive = 5
+
+[ansible]
+playbook_path = /etc/bedrock/playbooks
+inventory_path = /etc/bedrock/playbooks/test-inventory
+callback_module = superluminal.plugins.callback_sample_log

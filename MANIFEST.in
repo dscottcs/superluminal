@@ -1,0 +1,2 @@
+recursive-include superluminal/plugins *
+recursive-include superluminal/v1 *

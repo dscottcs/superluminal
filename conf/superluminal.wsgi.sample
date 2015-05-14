@@ -1,0 +1,3 @@
+import superluminal.app
+
+application = superluminal.app.Superluminal.getApp()

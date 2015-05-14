@@ -1,7 +1,7 @@
-from v1.resources import Run
+from superluminal.resources import Run
 
-class routes(object):
+class Routes(object):
 
     @classmethod
     def set_routes(cls, api):
-        api.add_route('v1/run', Run())
+        api.add_route('/v1/run', Run())
