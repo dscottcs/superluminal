@@ -39,16 +39,12 @@ class PlaybookRunner(object):
     def __init__(self, playbook_id, password):
         self.playbook_id = playbook_id
         self.password = password
-        self.ID = str(uuid.uuid4())
 
-    def get_ID(self):
-        return self.ID
-
-    def run(self):
+    def run(self, ID):
         playbook_file = '{0}/{1}.yml'.format(PLAYBOOK_PATH, self.playbook_id)
         stats = AggregateStats()
-        playbook_cb = CALLBACKS.PlaybookCallbacks(self.ID)
-        runner_cb = CALLBACKS.PlaybookRunnerCallbacks(self.ID, stats)
+        playbook_cb = CALLBACKS.PlaybookCallbacks(ID)
+        runner_cb = CALLBACKS.PlaybookRunnerCallbacks(ID, stats)
         inventory = ansible.inventory.Inventory(INVENTORY_PATH)
         def run_playbook():
             pb = ansible.playbook.PlayBook(playbook=playbook_file,
@@ -57,8 +53,9 @@ class PlaybookRunner(object):
                                            inventory=inventory,
                                            callbacks=playbook_cb,
                                            runner_callbacks=runner_cb)
+            LOG.info('Running playbook {0}'.format(playbook_file))
             results = pb.run()
-            LOG.info('RESULTS = %s' % results)
+            LOG.info('Results: {0}'.format(results))
         t = Thread(target=run_playbook, name='run_playbook')
         t.start()
 
@@ -66,9 +63,9 @@ class Run(object):
     def on_post(self, req, resp):
         playbook_id = req.get_param('playbook')
         password = req.get_param('password')
+        ID = req.get_param('ID')
         runner = PlaybookRunner(playbook_id, password)
-        ID = runner.get_ID()
-        runner.run()
+        runner.run(ID)
         body = {
             'ID': ID
         }

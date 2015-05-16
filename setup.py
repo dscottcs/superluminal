@@ -7,7 +7,7 @@ here = path.abspath(path.dirname(__file__))
 
 setup(
     name='superluminal',
-    version='0.0.1',
+    version='0.0.2',
 
     description='Ansible communication for humans',
 
@@ -19,6 +19,7 @@ setup(
     license='Apache v2',
 
     packages=['superluminal'],
+    include_package_data=True,
 
     install_requires=[
         'gunicorn',

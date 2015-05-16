@@ -1,6 +1,6 @@
 import falcon
 import logging
-from v1.routes import Routes
+from superluminal.v1.routes import Routes
 
 from oslo.config import cfg
 default_opts = [
