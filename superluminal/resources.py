@@ -55,7 +55,8 @@ class PlaybookRunner(object):
                                            runner_callbacks=runner_cb)
             LOG.info('Running playbook {0}'.format(playbook_file))
             results = pb.run()
-            LOG.info('Results: {0}'.format(results))
+            if hasattr(playbook_cb, 'on_finish'):
+                playbook_cb.on_finish(results)
         t = Thread(target=run_playbook, name='run_playbook')
         t.start()
 
