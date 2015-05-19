@@ -16,6 +16,6 @@ log_level = info
 keep_alive = 5
 
 [ansible]
-playbook_path = /etc/bedrock/playbooks
-inventory_path = /etc/bedrock/playbooks/test-inventory
-callback_module = superluminal.plugins.callback_sample_log
+playbook_path = /path//to/playbooks
+inventory_path = /path/to/inventory
+callback_module = my.callback.module
