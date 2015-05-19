@@ -4,7 +4,7 @@
 
 Ansible provides a callback mechanism for capturing the output from the various invocations in a playbook.  Callbacks exist a various stages in the playbook life cycle: playbook setup, module invocation, successful completion, error conditions, etc.  Superluminal gives the user a mechanism for specifying the names of the required Python callback modules, thus making it possible to use Ansible data in a variety of interesting ways.
 
-*Superluminal* is written as a WSGI application using the .  A 
+*Superluminal* is written as a WSGI application using the Python _gunicorn_ and _falcon_ libraries.
 Ansible playbooks are invoked in *superluminal* using a simple REST API.
 
 The Ansible library can, of course, be imported directly into in any Python script.  The *superluminal* approach is useful for two purposes:
@@ -12,7 +12,7 @@ The Ansible library can, of course, be imported directly into in any Python scri
 * As a simple Ansible playbook runner web service that can have an independent existence anywhere in an application ecosystem; and
 * As a simple means to avoid having to import Ansible classes directly into code, thus working around potential GPLv3 issues.  Superluminal is open source and licensed under a GPL-compatible license (Apache2) that is nonetheless less restrictive than GPLv3.
 
-* Setup
+# Setup
 
 From the top-level directory, type
 
@@ -34,7 +34,7 @@ At the moment, *superluminal* is not set up to run under SSL, although this woul
 
 Ansible must be configured separately.  *Superluminal* only needs to know the path to Ansible playbooks and inventory.
 
-* REST API
+# REST API
 
 At the moment, there is only a single REST endpoint:
 
@@ -46,7 +46,7 @@ The ```playbook``` parameter is required.  The ```password``` parameter is optio
 
 Output from this POST request is a simple JSON string giving a UUID string, which serves as the ID of the requested playbook run.  The user may do whatever she wants with this, for example, maintain a database of output from each playbook run using the various Ansible callbacks.
 
-* Ansible callbacks
+# Ansible callbacks
 
 The Ansible playbook runner uses a set of callbacks to inform a calling process of the outcome of the various steps in executing a playbook.  These are not well documented by Ansible, although the official Ansible documentation does refer to them and invites the user to examine the Ansible code to get an idea of how they are used.  In most cases it is pretty clear what data is available.
 
