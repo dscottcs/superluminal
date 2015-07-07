@@ -7,7 +7,7 @@ here = path.abspath(path.dirname(__file__))
 
 setup(
     name='superluminal',
-    version='0.0.2',
+    version='0.0.3',
 
     description='Ansible communication for humans',
 
