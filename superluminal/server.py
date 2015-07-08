@@ -37,7 +37,13 @@ gunicorn_opts = [
                help='Log level (one of "debug","info","warning","error", or "critical"'),
     cfg.IntOpt('keep_alive',
                default=5,
-               help='Seconds to keep HTTP connections open for successive requests')
+               help='Seconds to keep HTTP connections open for successive requests'),
+    cfg.StrOpt('wd',
+               default='/opt/playbooks',
+               help='Working directory for superluminal app (should be playbooks directory)'),
+    cfg.ListOpt('environment',
+                default='',
+                help='Environment settings ([key1=val1,key2=val2;...])')
 ]
 gunicorn_group = cfg.OptGroup(name='gunicorn', title='gunicorn')
 cfg.CONF.register_group(gunicorn_group)
@@ -60,7 +66,8 @@ class GunicornSuperluminalApp(gunicorn.app.base.BaseApplication):
             'accesslog': access_log,
             'errorlog': error_log,
             'loglevel': gun_conf.log_level,
-            'keepalive': gun_conf.keep_alive
+            'keepalive': gun_conf.keep_alive,
+            'raw_env': gun_conf.environment,
         }
         super(GunicornSuperluminalApp, self).__init__()
 

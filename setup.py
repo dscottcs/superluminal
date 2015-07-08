@@ -26,6 +26,9 @@ setup(
         'oslo.config',
         'falcon'
     ],
+    scripts=[
+        'bin/superluminal_inventory.py'
+    ]
 
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:

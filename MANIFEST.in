@@ -1,2 +1,3 @@
-recursive-include superluminal/plugins *
+recursive-include superluminal/sample *
 recursive-include superluminal/v1 *
+recursive-include superluminal/inventory *

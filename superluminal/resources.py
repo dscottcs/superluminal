@@ -5,11 +5,6 @@ from threading import Thread
 import json
 import os.path
 
-import ansible.playbook
-import ansible.inventory
-from ansible import utils
-from ansible.callbacks import AggregateStats
-
 from oslo.config import cfg
 ansible_opts = [
     cfg.StrOpt('playbook_path',
@@ -19,11 +14,11 @@ ansible_opts = [
                default='/etc/superluminal/inventory',
                help='Ansible inventory file'),
     cfg.StrOpt('callback_module',
-               default='superluminal.plugins.callback_sample',
+               default='superluminal.samples.callback_sample',
                help='Ansible callback module'),
     cfg.StrOpt('callback_class',
                default='SampleCallbacks',
-               help='Ansible callback class')
+               help='Ansible callback class'),
 ]
 ansible_group = cfg.OptGroup(name='ansible', title='ansible')
 cfg.CONF.register_group(ansible_group)
@@ -34,6 +29,7 @@ PLAYBOOK_PATH = cfg.CONF.ansible.playbook_path
 INVENTORY_PATH = cfg.CONF.ansible.inventory_path
 CALLBACK_MODULE = cfg.CONF.ansible.callback_module
 CALLBACK_CLASS = cfg.CONF.ansible.callback_class
+TMP_DIR = '/tmp'
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -42,19 +38,28 @@ CALLBACKS = getattr(importlib.import_module(CALLBACK_MODULE), CALLBACK_CLASS)
 
 class PlaybookRunner(object):
     def __init__(self, playbook_id, inventory, password=None):
+
         self.playbook_id = playbook_id
         self.inventory = inventory
         self.password = password
 
     def run(self, run_id):
+
+        import ansible.playbook
+        import ansible.inventory
+        from ansible import utils
+        from ansible.callbacks import AggregateStats
+
         playbook_file = '{0}/{1}.yml'.format(PLAYBOOK_PATH, self.playbook_id)
         stats = AggregateStats()
         cb = CALLBACKS(run_id, stats)
+        inventory = ansible.inventory.Inventory(self.inventory)
         def run_playbook():
+            os.chdir(cfg.CONF.ansible.playbook_path)
             pb = ansible.playbook.PlayBook(playbook=playbook_file,
                                            remote_pass=self.password,
                                            stats=stats,
-                                           inventory=self.inventory,
+                                           inventory=inventory,
                                            callbacks=cb,
                                            runner_callbacks=cb)
             LOG.info('Running playbook {0}'.format(playbook_file))
@@ -72,7 +77,7 @@ class Run(object):
         except Exception, e:
             raise falcon.HTTPBadRequest('Invalid Input',
                                         'Request body is not valid JSON: %s' % e)
-        playbook_id = req_body.get('playbook', None)
+        playbook_id = req_body.get('playbook_id', None)
         if playbook_id is None:
             raise falcon.HTTPBadRequest('Invalid Input',
                                         'Playbook ID is required')
@@ -80,17 +85,17 @@ class Run(object):
         if run_id is None:
             raise falcon.HTTPBadRequest('Invalid Input',
                                         'Run ID is required')
-        inventory = req_body.get('inventory')
-        if inventory is None and os.path.exists(INVENTORY_FILE):
-            inventory = ansible.inventory.Inventory(INVENTORY_FILE)
-        if inventory is None:
-            raise falcon.HTTPBadRequest('Invalid Input',
-                                        'No inventory has been defined')
-        password = req.get_body('password', None)
-        runner = PlaybookRunner(playbook_id, inventory, password)
+        # If the inventory path is not a real path (or doesn't exist)
+        # we assume the inventory is generated dynamically
+        if os.path.exists(INVENTORY_PATH):
+            inv = INVENTORY_PATH
+        else:
+            inv = '/usr/bin/superluminal_inventory.py'
+        password = req_body.get('password', None)
+        runner = PlaybookRunner(playbook_id, inv, password)
         runner.run(run_id)
         body = {
-            'run_id': run_id
+            'id': run_id
         }
         resp.body = json.dumps(body)
         resp.status = falcon.HTTP_201
