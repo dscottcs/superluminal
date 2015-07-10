@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+#from __future__ import print_function
 import sys
+import json
+import pprint
 
 from superluminal.inventory.inventory_manager import InventoryManager
 

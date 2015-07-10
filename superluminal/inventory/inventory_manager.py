@@ -1,6 +1,7 @@
 import importlib
 from oslo.config import cfg
 import json
+import pprint
 
 inventory_opts = [
     cfg.StrOpt('inventory_module',

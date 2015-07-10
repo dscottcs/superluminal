@@ -7,7 +7,7 @@ import logging
 LOG = logging.getLogger(__name__)
 
 class SampleCallbacks(object):
-    def __init__(self, ID):
+    def __init__(self, ID, stats):
         self.ID = ID
         self.stats = stats
 

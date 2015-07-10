@@ -3,6 +3,7 @@ import uuid
 import importlib
 from threading import Thread
 import json
+import pprint
 import os.path
 
 from oslo.config import cfg
@@ -37,9 +38,11 @@ LOG = logging.getLogger(__name__)
 CALLBACKS = getattr(importlib.import_module(CALLBACK_MODULE), CALLBACK_CLASS)
 
 class PlaybookRunner(object):
-    def __init__(self, playbook_id, inventory, password=None):
+    def __init__(self, playbook_id, tags, skip_tags, inventory, password=None):
 
         self.playbook_id = playbook_id
+        self.tags = tags
+        self.skip_tags = skip_tags
         self.inventory = inventory
         self.password = password
 
@@ -57,12 +60,15 @@ class PlaybookRunner(object):
         def run_playbook():
             os.chdir(cfg.CONF.ansible.playbook_path)
             pb = ansible.playbook.PlayBook(playbook=playbook_file,
+                                           only_tags=self.tags,
+                                           skip_tags=self.skip_tags,
                                            remote_pass=self.password,
                                            stats=stats,
                                            inventory=inventory,
                                            callbacks=cb,
                                            runner_callbacks=cb)
-            LOG.info('Running playbook {0}'.format(playbook_file))
+            print 'running %s' % pprint.pformat(pb.__dict__)
+            LOG.info('Running playbook {0} with tags {1} skip_tags {2}'.format(playbook_file, self.tags, self.skip_tags))
             results = pb.run()
             if hasattr(cb, 'superluminal_on_finish'):
                 cb.on_finish(results)
@@ -85,14 +91,14 @@ class Run(object):
         if run_id is None:
             raise falcon.HTTPBadRequest('Invalid Input',
                                         'Run ID is required')
-        # If the inventory path is not a real path (or doesn't exist)
-        # we assume the inventory is generated dynamically
+        tags = req_body.get('tags', None)
+        skip_tags = req_body.get('skip_tags', None)
         if os.path.exists(INVENTORY_PATH):
             inv = INVENTORY_PATH
         else:
             inv = '/usr/bin/superluminal_inventory.py'
         password = req_body.get('password', None)
-        runner = PlaybookRunner(playbook_id, inv, password)
+        runner = PlaybookRunner(playbook_id, tags, skip_tags, inv, password)
         runner.run(run_id)
         body = {
             'id': run_id
