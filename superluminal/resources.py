@@ -5,6 +5,8 @@ import pprint
 import os, os.path
 import sys
 from multiprocessing import Process
+import contextlib
+import StringIO
 from superluminal.forward.listener import ForwardListener
 
 from oslo.config import cfg
@@ -27,6 +29,16 @@ TMP_DIR = '/tmp'
 
 import logging
 LOG = logging.getLogger(__name__)
+
+@contextlib.contextmanager
+def stdout_redirect(where):
+    sys.stdout = where
+    sys.stderr = where
+    try:
+        yield where
+    finally:
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
 
 class PlaybookRunner(object):
 
@@ -67,8 +79,16 @@ class PlaybookRunner(object):
                                            callbacks=playbook_cb,
                                            runner_callbacks=runner_cb)
             listener.on_start()
-            results = pb.run()
-            listener.on_finish(results)
+            with stdout_redirect(StringIO.StringIO()) as temp_stdout:
+                results = pb.run()
+            temp_stdout.seek(0)
+            output = temp_stdout.read()
+            output_list = [line for line in temp_stdout.read().split('\n') if line]
+            data = {
+                'ansible_results': results,
+                'ansible_output': output
+            }
+            listener.on_finish(data)
         p = Process(target=run_playbook, args=(self.run_id, self.playbook_id))
         p.start()
 
