@@ -38,4 +38,4 @@ class InventoryManager(object):
             return None
         inventory = self.inv.get_inventory()
         return inventory
-        
+

@@ -11,9 +11,7 @@ def pretty(s):
 class CallbackModule(object):
 
     def __init__(self):
-        playbook_id = os.environ['PLAYBOOK_ID']
-        run_id = os.environ['RUN_ID']
-        self.listener = ForwardListener.getListener(playbook_id, run_id)
+        self.listener = ForwardListener.getListener()
 
     def on_any(self, *args, **kwargs):
         data = {

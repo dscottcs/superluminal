@@ -27,14 +27,19 @@ cfg.CONF(args=[], project='superluminal')
 import logging
 LOG = logging.getLogger(__name__)
 
-class Forwarder(object):
+# The default forwarder uses a URL to communicate
+# results to a waiting controller of some kind
+# (presumably the same controller that invoked
+# the playbook run in the first place)
+class URLForwarder(object):
+
     def __init__(self, playbook_id, run_id):
         # Find forwarding URL from configuration
         self.fwd_url = cfg.CONF.forward.forward_url
         self.playbook_id = playbook_id
         self.run_id = run_id
 
-    def forward(self, run_id, msg_type, data=None, host=None):
+    def forward(self, msg_type, data=None, host=None):
         payload = {
             'playbook_id': self.playbook_id,
             'run_id': self.run_id,
@@ -54,6 +59,16 @@ class Forwarder(object):
 
 class ForwardListener(object):
 
+    __listener__ = None
+
+    @classmethod
+    def getListener(cls):
+        if cls.__listener__ is None:
+            playbook_id = os.environ['PLAYBOOK_ID']
+            run_id = os.environ['RUN_ID']
+            cls.__listener__ = ForwardListener(playbook_id, run_id)
+        return cls.__listener__
+        
     def __init__(self, playbook_id, run_id):
         # Find forwarding class through configuration
         #fwd_location = cfg.CONF.forward.forward_location
@@ -63,14 +78,16 @@ class ForwardListener(object):
         #FWD_CLASS = cfg.CONF.forward.forward_class
         # Import configured forwarding class, instantiate forwarding object
         #self.forwarder = getattr(importlib.import_module(FWD_MODULE), FWD_CLASS)()
-
-        self.forwarder = Forwarder(playbook_id, run_id)
+        self.run_id = run_id
+        self.playbook_id = playbook_id
+        self.forwarder = URLForwarder(playbook_id, run_id)
 
     def accept(self, msg_type, data=None, host=None):
-        playbook_id = os.environ['PLAYBOOK_ID']
-        run_id = os.environ['RUN_ID']
         if hasattr(self.forwarder, 'forward'):
-            self.forwarder.forward(run_id, msg_type, data, host)
+            self.forwarder.forward(msg_type, data, host)
 
-    def on_finish(self, playbook_id, run_id, results):
-        self.forwarder.forward(run_id, 'finish', results)
+    def on_start(self):
+        self.forwarder.forward('start')
+
+    def on_finish(self, results):
+        self.forwarder.forward('finish', results)

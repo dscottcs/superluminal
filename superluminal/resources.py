@@ -1,13 +1,8 @@
 import falcon
-import uuid
 import importlib
 import json
-<<<<<<< HEAD
 import pprint
-=======
-import os
->>>>>>> 325ad69... Forward to C3
-import os.path
+import os, os.path
 import sys
 from multiprocessing import Process
 from superluminal.forward.listener import ForwardListener
@@ -41,7 +36,8 @@ class PlaybookRunner(object):
         self.run_id = run_id 
         self.inventory = inventory
         self.password = password
-        self.listener = ForwardListener(playbook_id, run_id)
+        self.tags = None
+        self.skip_tags = []
 
     def run(self):
 
@@ -57,9 +53,11 @@ class PlaybookRunner(object):
         inventory = ansible.inventory.Inventory(self.inventory)
         def run_playbook(run_id, playbook_id):
             os.chdir(cfg.CONF.ansible.playbook_path)
-            # Initialize the environment for this process for the Ansible callback plugin
+            # Initialize the environment for this process for the Ansible callback plugin,
+            # which uses the same listener.
             os.environ['PLAYBOOK_ID'] = playbook_id
             os.environ['RUN_ID'] = run_id
+            listener = ForwardListener.getListener()
             pb = ansible.playbook.PlayBook(playbook=playbook_file,
                                            only_tags=self.tags,
                                            skip_tags=self.skip_tags,
@@ -68,9 +66,9 @@ class PlaybookRunner(object):
                                            inventory=inventory,
                                            callbacks=playbook_cb,
                                            runner_callbacks=runner_cb)
-            LOG.info('Running playbook {}'.format(playbook_file))
+            listener.on_start()
             results = pb.run()
-            self.listener.on_finish(playbook_id, run_id, results)
+            listener.on_finish(results)
         p = Process(target=run_playbook, args=(self.run_id, self.playbook_id))
         p.start()
 
