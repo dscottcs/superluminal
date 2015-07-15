@@ -1,10 +1,16 @@
 import falcon
 import uuid
 import importlib
-from threading import Thread
 import json
+<<<<<<< HEAD
 import pprint
+=======
+import os
+>>>>>>> 325ad69... Forward to C3
 import os.path
+import sys
+from multiprocessing import Process
+from superluminal.forward.listener import ForwardListener
 
 from oslo.config import cfg
 ansible_opts = [
@@ -13,13 +19,7 @@ ansible_opts = [
                help='Ansible playbook library'),
     cfg.StrOpt('inventory_path',
                default='/etc/superluminal/inventory',
-               help='Ansible inventory file'),
-    cfg.StrOpt('callback_module',
-               default='superluminal.samples.callback_sample',
-               help='Ansible callback module'),
-    cfg.StrOpt('callback_class',
-               default='SampleCallbacks',
-               help='Ansible callback class'),
+               help='Ansible inventory file')
 ]
 ansible_group = cfg.OptGroup(name='ansible', title='ansible')
 cfg.CONF.register_group(ansible_group)
@@ -28,52 +28,51 @@ cfg.CONF(args=[], project='superluminal')
 
 PLAYBOOK_PATH = cfg.CONF.ansible.playbook_path
 INVENTORY_PATH = cfg.CONF.ansible.inventory_path
-CALLBACK_MODULE = cfg.CONF.ansible.callback_module
-CALLBACK_CLASS = cfg.CONF.ansible.callback_class
 TMP_DIR = '/tmp'
 
 import logging
 LOG = logging.getLogger(__name__)
 
-CALLBACKS = getattr(importlib.import_module(CALLBACK_MODULE), CALLBACK_CLASS)
-
 class PlaybookRunner(object):
-    def __init__(self, playbook_id, tags, skip_tags, inventory, password=None):
+
+    def __init__(self, playbook_id, run_id, inventory, password=None):
 
         self.playbook_id = playbook_id
-        self.tags = tags
-        self.skip_tags = skip_tags
+        self.run_id = run_id 
         self.inventory = inventory
         self.password = password
+        self.listener = ForwardListener(playbook_id, run_id)
 
-    def run(self, run_id):
+    def run(self):
 
         import ansible.playbook
         import ansible.inventory
         from ansible import utils
-        from ansible.callbacks import AggregateStats
+        from ansible.callbacks import AggregateStats, PlaybookCallbacks, PlaybookRunnerCallbacks
 
-        playbook_file = '{0}/{1}.yml'.format(PLAYBOOK_PATH, self.playbook_id)
+        playbook_file = '{}/{}.yml'.format(PLAYBOOK_PATH, self.playbook_id)
+        playbook_cb = PlaybookCallbacks(verbose=utils.VERBOSITY)
         stats = AggregateStats()
-        cb = CALLBACKS(run_id, stats)
+        runner_cb = PlaybookRunnerCallbacks(stats, verbose=utils.VERBOSITY)
         inventory = ansible.inventory.Inventory(self.inventory)
-        def run_playbook():
+        def run_playbook(run_id, playbook_id):
             os.chdir(cfg.CONF.ansible.playbook_path)
+            # Initialize the environment for this process for the Ansible callback plugin
+            os.environ['PLAYBOOK_ID'] = playbook_id
+            os.environ['RUN_ID'] = run_id
             pb = ansible.playbook.PlayBook(playbook=playbook_file,
                                            only_tags=self.tags,
                                            skip_tags=self.skip_tags,
                                            remote_pass=self.password,
                                            stats=stats,
                                            inventory=inventory,
-                                           callbacks=cb,
-                                           runner_callbacks=cb)
-            print 'running %s' % pprint.pformat(pb.__dict__)
-            LOG.info('Running playbook {0} with tags {1} skip_tags {2}'.format(playbook_file, self.tags, self.skip_tags))
+                                           callbacks=playbook_cb,
+                                           runner_callbacks=runner_cb)
+            LOG.info('Running playbook {}'.format(playbook_file))
             results = pb.run()
-            if hasattr(cb, 'superluminal_on_finish'):
-                cb.on_finish(results)
-        t = Thread(target=run_playbook, name='run_playbook')
-        t.start()
+            self.listener.on_finish(playbook_id, run_id, results)
+        p = Process(target=run_playbook, args=(self.run_id, self.playbook_id))
+        p.start()
 
 class Run(object):
     def on_post(self, req, resp):
@@ -98,8 +97,8 @@ class Run(object):
         else:
             inv = '/usr/bin/superluminal_inventory.py'
         password = req_body.get('password', None)
-        runner = PlaybookRunner(playbook_id, tags, skip_tags, inv, password)
-        runner.run(run_id)
+        runner = PlaybookRunner(playbook_id, run_id, inv, password)
+        runner.run()
         body = {
             'id': run_id
         }

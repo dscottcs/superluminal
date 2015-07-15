@@ -28,6 +28,9 @@ setup(
     ],
     scripts=[
         'bin/superluminal_inventory.py'
+    ],
+    data_files=[
+        ('/opt/superluminal', ['data/forwarder.py'])
     ]
 
     # Although 'package_data' is the preferred approach, in some case you may
